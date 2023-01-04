@@ -91,4 +91,5 @@ typedef struct hud_player_info_s
 #define CLDLL_INTERFACE_VERSION 7
 
 //#include "server.h" // server_static_t define for apiproxy
+typedef int (*pfnUserMsgHook)(const char* pszName, int iSize, void* pbuf);
 #include "APIProxy.h"
