@@ -2,6 +2,7 @@
 
 #define NLHOOK_VERSION 1
 
+#include "PlatformHeaders.h"
 #include "Platform.h"
 #include "mathlib.h"
 #include "vector.h"

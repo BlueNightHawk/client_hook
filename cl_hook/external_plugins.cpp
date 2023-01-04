@@ -40,7 +40,8 @@ void plugindll_s::InitExports()
 
 void plugindll_s::Free()
 {
-	FreeLibrary(hDllHandle);
+	if (IsHandleValid())
+		FreeLibrary(hDllHandle);
 }
 
 void plugindll_s::InitExportsPre()

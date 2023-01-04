@@ -1,19 +1,23 @@
 // Example plugin : HL2 style viewbob and viewlag
 
 #include "PlatformHeaders.h"
-#include "hud.h"
-#include "cl_util.h"
-#include "Exports.h"
-#include "ref_params.h"
-
+#include "Platform.h"
+#include "mathlib.h"
+#include "vector.h"
+#include "cdll_int.h"
 #include "../cl_hook/funcptrs.h"
+#include "Exports.h"
 #include "defs.h"
+
+#include "cvardef.h"
 
 cl_enginefunc_t gEngfuncs;
 dllfuncs_t gClientFuncs;
 
 cvar_t *cl_bobcycle, *cl_bob, *cl_bobup;
 cvar_t* cl_bobnew;
+cvar_t* cl_bobmode;
+
 
 void DLLEXPORT InitializePlugin(cl_enginefunc_t* pEnginefuncs, dllfuncs_t* clfuncs, int iVersion)
 {
@@ -31,7 +35,7 @@ void V_CalcViewModelLag(ref_params_t* pparams, Vector& origin, Vector angles, Ve
 
 	// Calculate our drift
 	Vector forward, right, up;
-	AngleVectors(angles, forward, right, up);
+	gEngfuncs.pfnAngleVectors(angles, forward, right, up);
 
 	if (pparams->frametime != 0.0f) // not in paused
 	{
@@ -58,7 +62,7 @@ void V_CalcViewModelLag(ref_params_t* pparams, Vector& origin, Vector angles, Ve
 		origin = origin + (vDifference * -1.0f) * 5.0f;
 	}
 
-	AngleVectors(original_angles, forward, right, up);
+	gEngfuncs.pfnAngleVectors(original_angles, forward, right, up);
 
 	float pitch = original_angles[0];
 
@@ -140,6 +144,7 @@ void DLLEXPORT V_CalcRefdef_Pre(struct ref_params_s* pparams)
 		cl_bob = gEngfuncs.pfnGetCvarPointer("cl_bob");
 		cl_bobup = gEngfuncs.pfnGetCvarPointer("cl_bobup");
 		cl_bobnew = gEngfuncs.pfnRegisterVariable("cl_bobnew", "0.01", FCVAR_ARCHIVE);
+		cl_bobmode = gEngfuncs.pfnRegisterVariable("cl_bobmode", "0", FCVAR_ARCHIVE);
 	}
 }
 
@@ -154,16 +159,27 @@ void DLLEXPORT V_CalcRefdef_Post(struct ref_params_s* pparams)
 
 	cl_entity_t* view = gEngfuncs.GetViewModel();
 
-	AngleVectors(g_refparams.cl_viewangles, pparams->forward, pparams->right, pparams->up);
+	if (cl_bobmode->value != 0)
+		gEngfuncs.pfnAngleVectors(g_refparams.cl_viewangles, pparams->forward, pparams->right, pparams->up);
 
 	// transform the view offset by the model's matrix to get the offset from
 	// model origin for the view
-	V_CalcBob(pparams, 0.75f, VB_SIN, bobtimes[0], bobRight, lasttimes[0]);	  // right
-	V_CalcBob(pparams, 1.50f, VB_SIN, bobtimes[1], bobUp, lasttimes[1]);	  // up
-	V_CalcBob(pparams, 1.00f, VB_SIN, bobtimes[2], bobForward, lasttimes[2]); // forward
+	if (cl_bobmode->value != 0)
+	{
+		V_CalcBob(&g_refparams, 0.75f, VB_SIN, bobtimes[0], bobRight, lasttimes[0]);	  // right
+		V_CalcBob(&g_refparams, 1.50f, VB_SIN, bobtimes[1], bobUp, lasttimes[1]);	 // up
+		V_CalcBob(&g_refparams, 1.00f, VB_SIN, bobtimes[2], bobForward, lasttimes[2]);	  // forward
 
-	V_CalcViewModelLag(pparams, view->origin, pparams->viewangles, pparams->cl_viewangles);
+		V_CalcViewModelLag(&g_refparams, view->origin, pparams->viewangles, pparams->cl_viewangles);
+	}
+	else
+	{
+		V_CalcBob(pparams, 0.75f, VB_SIN, bobtimes[0], bobRight, lasttimes[0]);	  // right
+		V_CalcBob(pparams, 1.50f, VB_SIN, bobtimes[1], bobUp, lasttimes[1]);	  // up
+		V_CalcBob(pparams, 1.00f, VB_SIN, bobtimes[2], bobForward, lasttimes[2]); // forward
 
+		V_CalcViewModelLag(&g_refparams, view->origin, pparams->viewangles, pparams->cl_viewangles);
+	}
 	for (int i = 0; i < 3; i++)
 	{
 		view->origin[i] += bobRight * 0.33 * pparams->right[i];
