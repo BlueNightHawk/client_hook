@@ -18,16 +18,8 @@
 #include "SPTLib/MemUtils.h"
 #include <filesystem>
 
-cl_enginefunc_t gEngfuncs;
-dllfuncs_t gClientFuncs;
-
+extern cl_enginefunc_t gEngfuncs;
 Utils utils = Utils::Utils(NULL, NULL, NULL);
-
-extern "C" {
-void DLLEXPORT InitializePlugin(cl_enginefunc_t* pEnginefuncs, dllfuncs_t* clfuncs, int iVersion);
-void DLLEXPORT HUD_Shutdown_Post();
-void DLLEXPORT Initialize_Post(cl_enginefunc_t* pEnginefuncs, int iVersion);
-}
 
 typedef void (*_VGuiWrap2_NotifyOfServerConnect)(const char* game, int IP_0, int port);
 
@@ -67,6 +59,11 @@ PATTERNS(VGuiWrap2_NotifyOfServerConnect,
 
 bool HWHook()
 {
+	if (gEngfuncs.CheckParm("-nomp3fix", 0) != 0)
+	{
+		return false;
+	}
+
 	void* handle = nullptr;
 	void* base = nullptr;
 	size_t size = 0;
@@ -81,22 +78,4 @@ bool HWHook()
 	MH_EnableHook(MH_ALL_HOOKS);
 
 	return true;
-}
-
-void DLLEXPORT InitializePlugin(cl_enginefunc_t* pEnginefuncs, dllfuncs_t* clfuncs, int iVersion)
-{
-	memcpy(&gEngfuncs, pEnginefuncs, sizeof(cl_enginefunc_t));
-	memcpy(&gClientFuncs, clfuncs, sizeof(cl_enginefunc_t));
-
-	MH_Initialize();
-}
-
-void DLLEXPORT Initialize_Post(cl_enginefunc_t* pEnginefuncs, int iVersion)
-{
-	HWHook();
-}
-
-void DLLEXPORT HUD_Shutdown_Post()
-{
-	MH_Uninitialize();
 }

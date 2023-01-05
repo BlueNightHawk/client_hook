@@ -11,10 +11,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\plugin_demo\main.cpp" />
+    <ClCompile Include="..\..\plugins\weaponlag\main.cpp" />
+    <ClCompile Include="..\..\pm_shared\pm_math.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\plugin_demo\defs.h" />
+    <ClInclude Include="..\..\plugins\weaponlag\defs.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{0995EAB5-CF95-4429-92F4-FA6BD7F5BDBA}</ProjectGuid>

@@ -18,6 +18,9 @@ cvar_t *cl_bobcycle, *cl_bob, *cl_bobup;
 cvar_t* cl_bobnew;
 cvar_t* cl_bobmode;
 
+double bobTimes[3]{0.0f};
+float lastTimes[3]{0.0f};
+Vector m_vecLastFacing;
 
 void DLLEXPORT InitializePlugin(cl_enginefunc_t* pEnginefuncs, dllfuncs_t* clfuncs, int iVersion)
 {
@@ -29,13 +32,12 @@ float m_flWeaponLag = 1.5f;
 
 void V_CalcViewModelLag(ref_params_t* pparams, Vector& origin, Vector angles, Vector original_angles)
 {
-	static Vector m_vecLastFacing;
 	Vector vOriginalOrigin = origin;
 	Vector vOriginalAngles = angles;
 
 	// Calculate our drift
 	Vector forward, right, up;
-	gEngfuncs.pfnAngleVectors(angles, forward, right, up);
+	AngleVectors(angles, &forward, &right, &up);
 
 	if (pparams->frametime != 0.0f) // not in paused
 	{
@@ -62,7 +64,7 @@ void V_CalcViewModelLag(ref_params_t* pparams, Vector& origin, Vector angles, Ve
 		origin = origin + (vDifference * -1.0f) * 5.0f;
 	}
 
-	gEngfuncs.pfnAngleVectors(original_angles, forward, right, up);
+	AngleVectors(original_angles, &forward, &right, &up);
 
 	float pitch = original_angles[0];
 
@@ -76,7 +78,7 @@ void V_CalcViewModelLag(ref_params_t* pparams, Vector& origin, Vector angles, Ve
 	}
 }
 
-enum calcBobMode_t
+enum class CalcBobMode
 {
 	VB_COS,
 	VB_SIN,
@@ -84,22 +86,22 @@ enum calcBobMode_t
 	VB_SIN2
 };
 
-void V_CalcBob(struct ref_params_s* pparams, float freqmod, calcBobMode_t mode, double& bobtime, float& bob, float& lasttime)
+// Quakeworld bob code, this fixes jitters in the mutliplayer since the clock (pparams->time) isn't quite linear
+void V_CalcBob(struct ref_params_s* pparams, float frequencyMultiplier, const CalcBobMode& mode, double& bobtime, float& bob, float& lasttime)
 {
 	float cycle;
 	Vector vel;
-
 
 	if (pparams->onground == -1 ||
 		pparams->time == lasttime)
 	{
 		// just use old value
-		return; // bob;
+		return;
 	}
 
 	lasttime = pparams->time;
 
-	bobtime += pparams->frametime * freqmod;
+	bobtime += pparams->frametime * frequencyMultiplier;
 	cycle = bobtime - (int)(bobtime / cl_bobcycle->value) * cl_bobcycle->value;
 	cycle /= cl_bobcycle->value;
 
@@ -117,27 +119,24 @@ void V_CalcBob(struct ref_params_s* pparams, float freqmod, calcBobMode_t mode, 
 	VectorCopy(pparams->simvel, vel);
 	vel[2] = 0;
 
-    bob = sqrt(vel[0] * vel[0] + vel[1] * vel[1]) * cl_bobnew->value;
+	bob = sqrt(vel[0] * vel[0] + vel[1] * vel[1]) * 0.01;
 
-	if (mode == VB_SIN)
+	if (mode == CalcBobMode::VB_SIN)
 		bob = bob * 0.3 + bob * 0.7 * sin(cycle);
-	else if (mode == VB_COS)
+	else if (mode == CalcBobMode::VB_COS)
 		bob = bob * 0.3 + bob * 0.7 * cos(cycle);
-	else if (mode == VB_SIN2)
+	else if (mode == CalcBobMode::VB_SIN2)
 		bob = bob * 0.3 + bob * 0.7 * sin(cycle) * sin(cycle);
-	else if (mode == VB_COS2)
+	else if (mode == CalcBobMode::VB_COS2)
 		bob = bob * 0.3 + bob * 0.7 * cos(cycle) * cos(cycle);
 
 	bob = V_min(bob, 4);
 	bob = V_max(bob, -7);
-	// return bob;
 }
 
-ref_params_s g_refparams;
 
 void DLLEXPORT V_CalcRefdef_Pre(struct ref_params_s* pparams)
 {
-	g_refparams = *pparams;
 	if (!cl_bobcycle)
 	{
 		cl_bobcycle = gEngfuncs.pfnGetCvarPointer("cl_bobcycle");
@@ -148,38 +147,29 @@ void DLLEXPORT V_CalcRefdef_Pre(struct ref_params_s* pparams)
 	}
 }
 
-void DLLEXPORT V_CalcRefdef_Post(struct ref_params_s* pparams)
+
+void V_PerformFuncs(struct ref_params_s* pparams)
 {
 	if (pparams->paused != 0)
 		return;
 
-    static double bobtimes[3] = {0, 0, 0};
-	static float lasttimes[3] = {0, 0, 0};
 	float bobRight = 0, bobUp = 0, bobForward = 0;
 
 	cl_entity_t* view = gEngfuncs.GetViewModel();
 
-	if (cl_bobmode->value != 0)
-		gEngfuncs.pfnAngleVectors(g_refparams.cl_viewangles, pparams->forward, pparams->right, pparams->up);
+	// transform the view offset by the model's matrix to get the offset from
+	// model origin for the view
+
+	AngleVectors(pparams->cl_viewangles, (Vector*)&pparams->forward, (Vector*)&pparams->right, (Vector*)&pparams->up);
 
 	// transform the view offset by the model's matrix to get the offset from
 	// model origin for the view
-	if (cl_bobmode->value != 0)
-	{
-		V_CalcBob(&g_refparams, 0.75f, VB_SIN, bobtimes[0], bobRight, lasttimes[0]);	  // right
-		V_CalcBob(&g_refparams, 1.50f, VB_SIN, bobtimes[1], bobUp, lasttimes[1]);	 // up
-		V_CalcBob(&g_refparams, 1.00f, VB_SIN, bobtimes[2], bobForward, lasttimes[2]);	  // forward
+	V_CalcBob(pparams, 0.75f, CalcBobMode::VB_SIN, bobTimes[0], bobRight, lastTimes[0]);
+	V_CalcBob(pparams, 1.50f, CalcBobMode::VB_SIN, bobTimes[1], bobUp, lastTimes[1]);
+	V_CalcBob(pparams, 1.00f, CalcBobMode::VB_SIN, bobTimes[2], bobForward, lastTimes[2]);
 
-		V_CalcViewModelLag(&g_refparams, view->origin, pparams->viewangles, pparams->cl_viewangles);
-	}
-	else
-	{
-		V_CalcBob(pparams, 0.75f, VB_SIN, bobtimes[0], bobRight, lasttimes[0]);	  // right
-		V_CalcBob(pparams, 1.50f, VB_SIN, bobtimes[1], bobUp, lasttimes[1]);	  // up
-		V_CalcBob(pparams, 1.00f, VB_SIN, bobtimes[2], bobForward, lasttimes[2]); // forward
+	V_CalcViewModelLag(pparams, view->origin, pparams->viewangles, pparams->cl_viewangles);
 
-		V_CalcViewModelLag(&g_refparams, view->origin, pparams->viewangles, pparams->cl_viewangles);
-	}
 	for (int i = 0; i < 3; i++)
 	{
 		view->origin[i] += bobRight * 0.33 * pparams->right[i];
@@ -188,4 +178,9 @@ void DLLEXPORT V_CalcRefdef_Post(struct ref_params_s* pparams)
 
 	cl_bob->string = "0.0";
 	cl_bob->value = 0.0f;
+}
+
+void DLLEXPORT V_CalcRefdef_Post(struct ref_params_s* pparams)
+{
+	V_PerformFuncs(pparams);
 }

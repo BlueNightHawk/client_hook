@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\..\plugins\mp3fix\main.cpp" />
+    <ClCompile Include="..\..\plugins\backends\minhook\src\buffer.c">
+      <Filter>Minhook</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\plugins\backends\minhook\src\hook.c">
+      <Filter>Minhook</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\plugins\backends\minhook\src\trampoline.c">
+      <Filter>Minhook</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\plugins\backends\minhook\src\hde\hde32.c">
+      <Filter>Minhook</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\plugins\backends\minhook\SPTLib\DetoursUtils.cpp">
+      <Filter>Minhook</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Minhook">
+      <UniqueIdentifier>{19cea5cd-b3ab-4958-8e3d-02050d1cd64d}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

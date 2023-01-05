@@ -10,6 +10,17 @@
 #include <filesystem>
 #include <vector>
 
+#include "SDL2/SDL.h"
+
+#include "MinHook.h"
+#include "Utils.hpp"
+
+#include "SDL2/SDL_opengl.h"
+
+#include <algorithm>
+
+void InitHooks();
+
 using namespace PluginManager;
 
 cl_enginefunc_t gEngfuncs;
@@ -123,10 +134,12 @@ void DLLEXPORT HUD_PostRunCmd(struct local_state_s* from, struct local_state_s* 
 
 int DLLEXPORT Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion)
 {
-	InitClientDll(pEnginefuncs);
 
 	memcpy(&gEngfuncs, pEnginefuncs, sizeof(cl_enginefunc_t));
 
+	InitHooks();
+
+	InitClientDll(pEnginefuncs);
 	if (!hClient || hClient == INVALID_HANDLE_VALUE)
 	{
 		return 0;
@@ -440,4 +453,126 @@ int DLLEXPORT HUD_GetStudioModelInterface(int version, struct r_studio_interface
 	PluginFuncsPost::HUD_GetStudioModelInterface(version, ppinterface, pstudio);
 
 	return result;
+}
+
+typedef void (*_SDL_GL_SwapWindow)(SDL_Window* window);
+
+// Stencil Hack and ImGui
+_SDL_GL_SwapWindow ORIG_SDL_GL_SwapWindow = NULL;
+SDL_Window* goldsrcWindow;
+
+bool bRestoreWindow = false;
+
+//-----------------------------------------------------------------------------
+//
+// 
+//-----------------------------------------------------------------------------
+SDL_Window* CreatePatchedWindow()
+{
+	SDL_Window* window = SDL_GetWindowFromID(1);
+
+	const char* title = SDL_GetWindowTitle(window);
+	int x = 0, y = 0, w = 0, h = 0;
+	SDL_GetWindowPosition(window, &x, &y);
+	SDL_GetWindowSize(window, &w, &h);
+	Uint32 flags = SDL_GetWindowFlags(window);
+
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
+
+	goldsrcWindow = SDL_CreateWindow(title, x, y, w, h, flags);
+
+	SDL_GLContext gl_context = SDL_GL_CreateContext(goldsrcWindow);
+	SDL_GL_MakeCurrent(goldsrcWindow, gl_context);
+
+	SDL_MinimizeWindow(window);
+	SDL_HideWindow(window);
+
+	SDL_MinimizeWindow(goldsrcWindow);
+	//SDL_RestoreWindow(goldsrcWindow);
+	//SDL_RaiseWindow(goldsrcWindow);
+
+	bRestoreWindow = true;
+
+	return goldsrcWindow;
+}
+
+//-----------------------------------------------------------------------------
+// By hooking SDL_GL_SwapWindow we can render ImGui
+//-----------------------------------------------------------------------------
+void HOOKED_SDL_GL_SwapWindow(SDL_Window* window)
+{
+	if (bRestoreWindow)
+	{
+		SDL_RestoreWindow(goldsrcWindow);
+		SDL_RaiseWindow(goldsrcWindow);
+		bRestoreWindow = false;
+	}
+	ORIG_SDL_GL_SwapWindow(goldsrcWindow);
+}
+
+//-----------------------------------------------------------------------------
+// Hook SDL2.dll
+//-----------------------------------------------------------------------------
+void HookSDL2()
+{
+	// Get SDL functions
+	HMODULE hSdl2 = GetModuleHandle("SDL2.dll");
+	ORIG_SDL_GL_SwapWindow = (_SDL_GL_SwapWindow)GetProcAddress(hSdl2, "SDL_GL_SwapWindow");
+
+	if (ORIG_SDL_GL_SwapWindow)
+		printf("[SDL2.dll] Got SDL_GL_SwapWindow! Now you can use ImGUI...\n");
+	else
+		printf("[SDL2.dll] Can't get SDL_GL_SwapWindow! There will be no ImGUI.\n");
+
+	if (ORIG_SDL_GL_SwapWindow)
+	{
+		void* pSDL_GL_SwapWindow = (void*)ORIG_SDL_GL_SwapWindow;
+		MH_CreateHook(pSDL_GL_SwapWindow, (void*)HOOKED_SDL_GL_SwapWindow, (void**)&ORIG_SDL_GL_SwapWindow);
+		MH_EnableHook(pSDL_GL_SwapWindow);
+	}
+}
+bool HWHook();
+	//-----------------------------------------------------------------------------
+// Hook hw.dll
+//-----------------------------------------------------------------------------
+void HookEngine()
+{
+	void* handle;
+	void* base;
+	size_t size;
+
+	if (!MemUtils::GetModuleInfo(L"hw.dll", &handle, &base, &size))
+	{
+		printf("[hl.exe] Can't get module info about hw.dll! Stopping hooking...\n");
+		return;
+	}
+
+	Utils utils = Utils::Utils(handle, base, size);
+	printf("[hl.exe] Hooked hw.dll!\n");
+
+	HWHook();
+}
+
+void InitHooks()
+{
+	if (gEngfuncs.CheckParm("-nohooks", 0) != 0)
+	{
+		return;
+	}
+
+	MH_Initialize();
+
+	HookEngine();
+	HookSDL2();
+	CreatePatchedWindow();
+
+	gEngfuncs.Con_DPrintf("%s \n", (char*)glGetString(GL_EXTENSIONS));
 }

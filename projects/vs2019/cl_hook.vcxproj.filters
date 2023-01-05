@@ -7,6 +7,9 @@
     <Filter Include="Header Files">
       <UniqueIdentifier>{42c91dcf-853d-42f2-8ed7-922ebea54d1b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Minhook">
+      <UniqueIdentifier>{4d91c6a2-bbab-44c0-b146-c4254d703b6d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\cl_hook\hook_main.cpp">
@@ -21,10 +24,34 @@
     <ClCompile Include="..\..\cl_hook\plugins_postcalls.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\plugins\backends\minhook\SPTLib\DetoursUtils.cpp">
+      <Filter>Minhook</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\plugins\backends\minhook\src\buffer.c">
+      <Filter>Minhook</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\plugins\backends\minhook\src\hook.c">
+      <Filter>Minhook</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\plugins\backends\minhook\src\trampoline.c">
+      <Filter>Minhook</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\plugins\backends\minhook\src\hde\hde32.c">
+      <Filter>Minhook</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\plugins\mp3fix\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\cl_hook\funcptrs.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\plugins\backends\minhook\src\buffer.h">
+      <Filter>Minhook</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\plugins\backends\minhook\src\trampoline.h">
+      <Filter>Minhook</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

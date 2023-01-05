@@ -9,12 +9,15 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\plugin_demo\main.cpp">
+    <ClCompile Include="..\..\pm_shared\pm_math.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\plugins\weaponlag\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\plugin_demo\defs.h">
+    <ClInclude Include="..\..\plugins\weaponlag\defs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
