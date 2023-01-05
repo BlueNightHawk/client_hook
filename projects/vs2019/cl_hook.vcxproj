@@ -15,6 +15,7 @@
     <ClCompile Include="..\..\cl_hook\hook_main.cpp" />
     <ClCompile Include="..\..\cl_hook\plugins_postcalls.cpp" />
     <ClCompile Include="..\..\cl_hook\plugins_precalls.cpp" />
+    <ClCompile Include="..\..\cl_hook\registry.cpp" />
     <ClCompile Include="..\..\plugins\backends\minhook\SPTLib\DetoursUtils.cpp" />
     <ClCompile Include="..\..\plugins\backends\minhook\src\buffer.c" />
     <ClCompile Include="..\..\plugins\backends\minhook\src\hde\hde32.c" />

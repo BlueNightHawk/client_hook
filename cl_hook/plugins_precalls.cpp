@@ -572,3 +572,17 @@ int PluginFuncsPre::HUD_GetStudioModelInterface(int version, struct r_studio_int
 	}
 	return 0;
 }
+
+void PluginFuncsPre::DLL_SwapWindow()
+{
+	for (size_t i = 0; i < g_Plugins.size(); i++)
+	{
+		auto p = &g_Plugins.at(i);
+
+		if (!p->pDLL_SwapWindow)
+			continue;
+
+		p->pDLL_SwapWindow();
+	}
+}
+	

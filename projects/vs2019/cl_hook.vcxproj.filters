@@ -42,6 +42,9 @@
     <ClCompile Include="..\..\plugins\mp3fix\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\cl_hook\registry.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\cl_hook\funcptrs.h">

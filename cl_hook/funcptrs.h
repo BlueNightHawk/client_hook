@@ -141,6 +141,9 @@ typedef struct dllfuncs_s
 
 typedef void (*_pfn_InitializePlugin)(cl_enginefunc_t* pEnginefuncs, dllfuncs_t* clfuncs, int iVersion);
 
+typedef void (*_pfn_DLL_SwapWindow)(void);
+
+
 typedef struct plugindll_s
 {
 	HMODULE hDllHandle;
@@ -151,6 +154,8 @@ typedef struct plugindll_s
 	void InitExports();
 	void InitExportsPre();
 	void InitExportsPost();
+
+	_pfn_DLL_SwapWindow pDLL_SwapWindow;
 
 	void Free();
 
@@ -165,6 +170,9 @@ void AddToList(char* pszName);
 void FreePlugins();
 namespace PluginFuncsPre
 {
+// ImGUI
+void DLL_SwapWindow(void);
+
 // From hl_weapons
 void HUD_PostRunCmd(struct local_state_s* from, struct local_state_s* to, struct usercmd_s* cmd, int runfuncs, double time, unsigned int random_seed);
 

@@ -19,11 +19,24 @@
 
 #include <algorithm>
 
-void InitHooks();
+extern "C" {
+SDL_Window DLLEXPORT* GetSdlWindow();
+int DLLEXPORT GetWindowCenterX(void);
+int DLLEXPORT GetWindowCenterY(void);
+}
+
+bool InitHooks();
+int RegRead(const char* valuename);
+bool RegWrite(const char* valuename, int value);
+bool RegCreate(const char* subkey);
+
+static bool g_bSdlFullscreen = false;
+static bool g_bQueueRestart = false;
 
 using namespace PluginManager;
 
 cl_enginefunc_t gEngfuncs;
+cl_enginefunc_t gClientEngfuncs;
 
 HMODULE hClient;
 
@@ -31,6 +44,8 @@ dllfuncs_s g_ClientFuncs;
 dllfuncs_s g_OriginalClientFuncs;
 
 #define GET_FUNC_PTR(name) g_ClientFuncs.p##name## = (_pfn_##name##)GetProcAddress(hClient, #name)
+
+
 
 void InitClientDll(cl_enginefunc_t* pEnginefuncs)
 {
@@ -134,10 +149,17 @@ void DLLEXPORT HUD_PostRunCmd(struct local_state_s* from, struct local_state_s* 
 
 int DLLEXPORT Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion)
 {
-
 	memcpy(&gEngfuncs, pEnginefuncs, sizeof(cl_enginefunc_t));
+	memcpy(&gClientEngfuncs, pEnginefuncs, sizeof(cl_enginefunc_t));
+	
+	// Fixes spinning bug on fullscreen
+	gClientEngfuncs.GetWindowCenterX = &::GetWindowCenterX;
+	gClientEngfuncs.GetWindowCenterY = &::GetWindowCenterY;
 
-	InitHooks();
+	if (!InitHooks())
+	{
+		g_bQueueRestart = true;
+	}
 
 	InitClientDll(pEnginefuncs);
 	if (!hClient || hClient == INVALID_HANDLE_VALUE)
@@ -147,10 +169,11 @@ int DLLEXPORT Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion)
 
 	InitExports();
 
-	InitPlugins();
+	if (!g_bQueueRestart)
+		InitPlugins();
 
 	PluginFuncsPre::Initialize(pEnginefuncs, iVersion);
-	g_ClientFuncs.pInitialize(pEnginefuncs, iVersion);
+	g_ClientFuncs.pInitialize(&gClientEngfuncs, iVersion);
 	PluginFuncsPost::Initialize(pEnginefuncs, iVersion);
 	return 1;
 }
@@ -236,6 +259,12 @@ void DLLEXPORT HUD_Frame(double time)
 	PluginFuncsPre::HUD_Frame(time);
 	g_ClientFuncs.pHUD_Frame(time);
 	PluginFuncsPost::HUD_Frame(time);
+
+	if (g_bQueueRestart)
+	{
+		gEngfuncs.pfnClientCmd("_restart");
+		g_bQueueRestart = false;
+	}
 }
 
 void DLLEXPORT HUD_VoiceStatus(int entindex, qboolean bTalking)
@@ -375,6 +404,8 @@ void DLLEXPORT HUD_Shutdown(void)
 
 	FreePlugins();
 
+	MH_Uninitialize();
+
 	FreeLibrary(hClient);
 }
 
@@ -463,6 +494,24 @@ SDL_Window* goldsrcWindow;
 
 bool bRestoreWindow = false;
 
+int DLLEXPORT GetWindowCenterX(void)
+{
+	int x = 0, y = 0, w = 0, h = 0;
+	SDL_GetWindowPosition(goldsrcWindow, &x, &y);
+	SDL_GetWindowSize(goldsrcWindow, &w, &h);
+
+	return w / 2;
+}
+
+int DLLEXPORT GetWindowCenterY(void)
+{
+	int x = 0, y = 0, w = 0, h = 0;
+	SDL_GetWindowPosition(goldsrcWindow, &x, &y);
+	SDL_GetWindowSize(goldsrcWindow, &w, &h);
+
+	return h / 2;
+}
+
 //-----------------------------------------------------------------------------
 //
 // 
@@ -496,6 +545,12 @@ SDL_Window* CreatePatchedWindow()
 	SDL_HideWindow(window);
 
 	SDL_MinimizeWindow(goldsrcWindow);
+
+	if (g_bSdlFullscreen)
+	{
+		SDL_SetWindowFullscreen(goldsrcWindow, SDL_WINDOW_FULLSCREEN);
+	}
+
 	//SDL_RestoreWindow(goldsrcWindow);
 	//SDL_RaiseWindow(goldsrcWindow);
 
@@ -515,6 +570,8 @@ void HOOKED_SDL_GL_SwapWindow(SDL_Window* window)
 		SDL_RaiseWindow(goldsrcWindow);
 		bRestoreWindow = false;
 	}
+
+	PluginFuncsPre::DLL_SwapWindow();
 	ORIG_SDL_GL_SwapWindow(goldsrcWindow);
 }
 
@@ -540,7 +597,10 @@ void HookSDL2()
 	}
 }
 bool HWHook();
-	//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
 // Hook hw.dll
 //-----------------------------------------------------------------------------
 void HookEngine()
@@ -561,12 +621,48 @@ void HookEngine()
 	HWHook();
 }
 
-void InitHooks()
+bool RequireRestart()
+{
+#if 1
+	if (gEngfuncs.CheckParm("-nofbofix", 0) != 0)
+	{
+		return false;
+	}
+	RegCreate("SDL_FullScreen");
+	int iSDLFullscreen = RegRead("SDL_FullScreen");
+	int iWindowed = RegRead("ScreenWindowed");
+	int iVidMode = RegRead("vid_level");
+
+	if (iWindowed == 0 && iVidMode == 0)
+	{
+		RegWrite("ScreenWindowed", 1);
+		RegWrite("SDL_FullScreen", 1);
+		return true;
+	}
+	else if (iWindowed == 0 && iVidMode == 1)
+	{
+		g_bSdlFullscreen = true;
+	}
+	else if (iSDLFullscreen == 1)
+	{
+		RegWrite("ScreenWindowed", 0);
+		RegWrite("SDL_FullScreen", 0);
+		g_bSdlFullscreen = true;
+	}
+#endif
+
+	return false;
+}
+
+bool InitHooks()
 {
 	if (gEngfuncs.CheckParm("-nohooks", 0) != 0)
 	{
-		return;
+		return true;
 	}
+
+	if (RequireRestart())
+		return false;
 
 	MH_Initialize();
 
@@ -574,5 +670,10 @@ void InitHooks()
 	HookSDL2();
 	CreatePatchedWindow();
 
-	gEngfuncs.Con_DPrintf("%s \n", (char*)glGetString(GL_EXTENSIONS));
+	return true;
+}
+
+SDL_Window DLLEXPORT* GetSdlWindow()
+{
+	return goldsrcWindow;
 }

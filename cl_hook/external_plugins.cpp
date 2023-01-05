@@ -40,6 +40,7 @@ void plugindll_s::InitExports()
 
 void plugindll_s::Free()
 {
+	FreeLibrary(hDllHandle);
 }
 
 void plugindll_s::InitExportsPre()
@@ -106,6 +107,8 @@ void plugindll_s::InitExportsPre()
 
 	// From GameStudioModelRenderer
 	GET_FUNC_PTR_PRE(HUD_GetStudioModelInterface);
+
+	pDLL_SwapWindow = (_pfn_DLL_SwapWindow)GetProcAddress(hDllHandle, "DLL_SwapWindow");
 }
 
 void plugindll_s::InitExportsPost()
@@ -193,6 +196,8 @@ void PluginManager::AddToList(char* pszName)
 
 void PluginManager::InitPlugins()
 {
+	g_Plugins.clear();
+
 	static char token[128];
 	char *afile, *pfile;
 
@@ -219,5 +224,5 @@ void PluginManager::FreePlugins()
 	{
 		g_Plugins[i].Free();
 	}
-	g_Plugins.clear();
+	//g_Plugins.clear();
 }
