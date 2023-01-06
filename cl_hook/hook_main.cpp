@@ -19,10 +19,15 @@
 
 #include <algorithm>
 
+#include "studio.h"
+#include "com_model.h"
+#include "r_studioint.h"
+
 extern "C" {
 SDL_Window DLLEXPORT* GetSdlWindow();
 int DLLEXPORT GetWindowCenterX(void);
 int DLLEXPORT GetWindowCenterY(void);
+engine_studio_api_s DLLEXPORT* GetStudioInterface();
 }
 
 bool InitHooks();
@@ -35,6 +40,8 @@ static bool g_bQueueRestart = false;
 
 using namespace PluginManager;
 
+void PatchEngine(void);
+
 cl_enginefunc_t gEngfuncs;
 cl_enginefunc_t gClientEngfuncs;
 
@@ -43,9 +50,10 @@ HMODULE hClient;
 dllfuncs_s g_ClientFuncs;
 dllfuncs_s g_OriginalClientFuncs;
 
+engine_studio_api_s IEngineStudio;
+engine_studio_api_s IOriginalEngineStudio;
+
 #define GET_FUNC_PTR(name) g_ClientFuncs.p##name## = (_pfn_##name##)GetProcAddress(hClient, #name)
-
-
 
 void InitClientDll(cl_enginefunc_t* pEnginefuncs)
 {
@@ -172,9 +180,9 @@ int DLLEXPORT Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion)
 	if (!g_bQueueRestart)
 		InitPlugins();
 
-	PluginFuncsPre::Initialize(pEnginefuncs, iVersion);
+	PluginFuncsPre::Initialize(&gClientEngfuncs, iVersion);
 	g_ClientFuncs.pInitialize(&gClientEngfuncs, iVersion);
-	PluginFuncsPost::Initialize(pEnginefuncs, iVersion);
+	PluginFuncsPost::Initialize(&gClientEngfuncs, iVersion);
 	return 1;
 }
 
@@ -400,13 +408,12 @@ void DLLEXPORT HUD_Shutdown(void)
 {
 	PluginFuncsPre::HUD_Shutdown();
 	g_ClientFuncs.pHUD_Shutdown();
+	FreeLibrary(hClient);
 	PluginFuncsPost::HUD_Shutdown();
 
 	FreePlugins();
 
 	MH_Uninitialize();
-
-	FreeLibrary(hClient);
 }
 
 int DLLEXPORT HUD_Key_Event(int eventcode, int keynum, const char* pszCurrentBinding)
@@ -479,6 +486,9 @@ void DLLEXPORT V_CalcRefdef(struct ref_params_s* pparams)
 // From GameStudioModelRenderer
 int DLLEXPORT HUD_GetStudioModelInterface(int version, struct r_studio_interface_s** ppinterface, struct engine_studio_api_s* pstudio)
 {
+	memcpy(&IEngineStudio, pstudio, sizeof(engine_studio_api_s));
+	memcpy(&IOriginalEngineStudio, pstudio, sizeof(engine_studio_api_s));
+
 	PluginFuncsPre::HUD_GetStudioModelInterface(version, ppinterface, pstudio);
 	int result = g_ClientFuncs.pHUD_GetStudioModelInterface(version, ppinterface, pstudio);
 	PluginFuncsPost::HUD_GetStudioModelInterface(version, ppinterface, pstudio);
@@ -500,7 +510,7 @@ int DLLEXPORT GetWindowCenterX(void)
 	SDL_GetWindowPosition(goldsrcWindow, &x, &y);
 	SDL_GetWindowSize(goldsrcWindow, &w, &h);
 
-	return w / 2;
+	return x + w / 2;
 }
 
 int DLLEXPORT GetWindowCenterY(void)
@@ -509,8 +519,10 @@ int DLLEXPORT GetWindowCenterY(void)
 	SDL_GetWindowPosition(goldsrcWindow, &x, &y);
 	SDL_GetWindowSize(goldsrcWindow, &w, &h);
 
-	return h / 2;
+	return y + h / 2;
 }
+
+void HL_ToggleFullScreen(SDL_Window* window, int mode);
 
 //-----------------------------------------------------------------------------
 //
@@ -548,7 +560,7 @@ SDL_Window* CreatePatchedWindow()
 
 	if (g_bSdlFullscreen)
 	{
-		SDL_SetWindowFullscreen(goldsrcWindow, SDL_WINDOW_FULLSCREEN);
+		//SDL_SetWindowFullscreen(goldsrcWindow, SDL_WINDOW_FULLSCREEN);
 	}
 
 	//SDL_RestoreWindow(goldsrcWindow);
@@ -568,6 +580,11 @@ void HOOKED_SDL_GL_SwapWindow(SDL_Window* window)
 	{
 		SDL_RestoreWindow(goldsrcWindow);
 		SDL_RaiseWindow(goldsrcWindow);
+
+		if (g_bSdlFullscreen)
+		{
+			HL_ToggleFullScreen(goldsrcWindow, 1);
+		}
 		bRestoreWindow = false;
 	}
 
@@ -664,6 +681,8 @@ bool InitHooks()
 	if (RequireRestart())
 		return false;
 
+	PatchEngine();
+
 	MH_Initialize();
 
 	HookEngine();
@@ -676,4 +695,9 @@ bool InitHooks()
 SDL_Window DLLEXPORT* GetSdlWindow()
 {
 	return goldsrcWindow;
+}
+
+engine_studio_api_s DLLEXPORT* GetStudioInterface()
+{
+	return &IEngineStudio;
 }

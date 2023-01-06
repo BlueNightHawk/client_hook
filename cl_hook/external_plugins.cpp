@@ -10,6 +10,7 @@
 #include <vector>
 
 extern cl_enginefuncs_s gEngfuncs;
+extern cl_enginefuncs_s gClientEngfuncs;
 std::vector<plugindll_t> g_Plugins;
 extern dllfuncs_s g_ClientFuncs;
 
@@ -40,7 +41,7 @@ void plugindll_s::InitExports()
 
 void plugindll_s::Free()
 {
-	FreeLibrary(hDllHandle);
+	while(FreeLibrary(hDllHandle));
 }
 
 void plugindll_s::InitExportsPre()
@@ -188,7 +189,7 @@ void PluginManager::AddToList(char* pszName)
 	{
 		InitializePlugin = (_pfn_InitializePlugin)GetProcAddress(pPlugin->hDllHandle, "InitializePlugin");
 
-		InitializePlugin(&gEngfuncs, &g_ClientFuncs, NLHOOK_VERSION);
+		InitializePlugin(&gClientEngfuncs, &g_ClientFuncs, NLHOOK_VERSION);
 
 		pPlugin->InitExports();
 	}

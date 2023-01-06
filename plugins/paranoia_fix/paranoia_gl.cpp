@@ -1,4 +1,4 @@
-D// Emulates paranoia's hacked opengl32.dll
+// Emulates paranoia's hacked opengl32.dll
 #include "PlatformHeaders.h"
 #include "Platform.h"
 #include "mathlib.h"
