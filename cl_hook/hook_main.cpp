@@ -413,7 +413,8 @@ void DLLEXPORT HUD_Shutdown(void)
 
 	FreePlugins();
 
-	MH_Uninitialize();
+	if (gEngfuncs.CheckParm("-nohooks", 0) == 0)
+		MH_Uninitialize();
 }
 
 int DLLEXPORT HUD_Key_Event(int eventcode, int keynum, const char* pszCurrentBinding)
@@ -583,7 +584,10 @@ void HOOKED_SDL_GL_SwapWindow(SDL_Window* window)
 
 		if (g_bSdlFullscreen)
 		{
-			HL_ToggleFullScreen(goldsrcWindow, 1);
+			if (gEngfuncs.CheckParm("-stencilonly", 0) != 0)
+				SDL_SetWindowFullscreen(goldsrcWindow, SDL_WINDOW_FULLSCREEN);
+			else
+				HL_ToggleFullScreen(goldsrcWindow, 1);
 		}
 		bRestoreWindow = false;
 	}
@@ -675,6 +679,17 @@ bool InitHooks()
 {
 	if (gEngfuncs.CheckParm("-nohooks", 0) != 0)
 	{
+		return true;
+	}
+
+	if (gEngfuncs.CheckParm("-stencilonly", 0) != 0)
+	{
+		if (RequireRestart())
+			return false;
+
+		MH_Initialize();
+		HookSDL2();
+		CreatePatchedWindow();
 		return true;
 	}
 

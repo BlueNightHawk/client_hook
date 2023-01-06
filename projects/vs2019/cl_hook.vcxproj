@@ -71,7 +71,7 @@
     <TargetName>client</TargetName>
     <IntDir>$(SolutionDir)$(Configuration)\\$(ProjectName)\int\</IntDir>
     <EnableClangTidyCodeAnalysis>true</EnableClangTidyCodeAnalysis>
-    <OutDir>$(SolutionDir)$(Configuration)\\$(ProjectName)\</OutDir>
+    <OutDir>E:\SteamLibrary\steamapps\common\Half-Life\paranoia\cl_dlls\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
