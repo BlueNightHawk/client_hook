@@ -1,7 +1,13 @@
-#define CLFUNCS
-#include "defs.h"
+#include "PlatformHeaders.h"
+#include "Platform.h"
+#include "mathlib.h"
+#include "vector.h"
+#include "cdll_int.h"
+#include "kbutton.h"
 #include "funcptrs.h"
 
+#include <filesystem>
+#include <vector>
 
 extern cl_enginefuncs_s gEngfuncs;
 extern cl_enginefuncs_s gClientEngfuncs;

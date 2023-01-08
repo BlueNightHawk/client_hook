@@ -153,6 +153,23 @@ int stage = 0;
 float nextFrame = 0;
 GLuint screenHandler;
 
+typedef SDL_Window* (*_pfn_GetWindow)();
+_pfn_GetWindow pGetWindow;
+
+SDL_Window* GetWindow()
+{
+	if (!pGetWindow)
+	{
+		HMODULE pClient = GetModuleHandle("client.dll");
+		if (!pClient)
+			return nullptr;
+
+		pGetWindow = (_pfn_GetWindow)GetProcAddress(pClient, "GetSdlWindow");
+	}
+
+	return (SDL_Window*)pGetWindow();
+}
+
 class CWaterRenderer
 {
 public:
@@ -202,16 +219,7 @@ int CWaterRenderer::Init()
 {
 	m_pCvarDrawAnimatedWater = gEngfuncs.pfnRegisterVariable("r_animate_water", "1", FCVAR_ARCHIVE);
 
-	LoadWADFiles();
-	LoadWADTextures();
-	FreeWADFiles();
-
-	return 1;
-}
-
-int CWaterRenderer::VidInit()
-{
-	SDL_GetWindowSize(SDL_GetWindowFromID(1), &ScreenWidth, &ScreenHeight);
+	SDL_GetWindowSize(GetWindow(), &ScreenWidth, &ScreenHeight);
 
 	// create a load of blank pixels to create textures with
 	unsigned char* pBlankTex = new unsigned char[ScreenWidth * ScreenHeight * 3];
@@ -227,6 +235,15 @@ int CWaterRenderer::VidInit()
 	// free the memory
 	delete[] pBlankTex;
 
+	LoadWADFiles();
+	LoadWADTextures();
+	FreeWADFiles();
+
+	return 1;
+}
+
+int CWaterRenderer::VidInit()
+{
 	waterBuffer.clear();
 	stage = 0;
 	nextFrame = 0;
@@ -550,9 +567,10 @@ void CWaterRenderer::AnimateWater()
 	{
 		if (waterBuffer[i].default_tex != 0)
 		{
-			glViewport(0, 0, waterBuffer[i].tex_width, waterBuffer[i].tex_height);
+		//	glViewport(-waterBuffer[i].tex_width, -waterBuffer[i].tex_height, waterBuffer[i].tex_width, waterBuffer[i].tex_height);
 			glBindTexture(GL_TEXTURE_RECTANGLE_NV, waterBuffer[i].default_tex);
-			glColor4f(1, 1, 1, 1);
+			glViewport(0, 0, waterBuffer[i].tex_width, waterBuffer[i].tex_height);
+			glColor4f(1, 1, 1, 0);
 
 			// ===== this layer stays still =====
 			glBegin(GL_QUADS);

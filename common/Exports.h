@@ -64,4 +64,8 @@ extern "C"
 
 	// From GameStudioModelRenderer
 	int DLLEXPORT HUD_GetStudioModelInterface( int version, struct r_studio_interface_s **ppinterface, struct engine_studio_api_s *pstudio );
-}
+
+	// COF Specific
+	void DLLEXPORT HUD_PlayerMove_0(struct playermove_s* ppmove, int server);
+	void DLLEXPORT HUD_PlayerMoveInit_0(struct playermove_s* ppmove);
+	}

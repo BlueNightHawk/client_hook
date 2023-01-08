@@ -15,8 +15,8 @@
 //Disable all Windows 10 and older APIs otherwise pulled in by Windows.h
 #define NOGDICAPMASKS
 #define NOVIRTUALKEYCODES
-#define NOWINMESSAGES
-#define NOWINSTYLES
+//#define NOWINMESSAGES
+//#define NOWINSTYLES
 #define NOSYSMETRICS
 #define NOMENUS
 #define NOICONS
@@ -34,11 +34,11 @@
 #define NOKERNEL
 //#define NOUSER //Need GetCursorPos in the mouse thread code
 #define NONLS
-#define NOMB
+//#define NOMB
 #define NOMEMMGR
 #define NOMETAFILE
 #define NOMINMAX
-#define NOMSG
+//#define NOMSG
 #define NOOPENFILE
 #define NOSCROLL
 #define NOSERVICE

@@ -1,27 +1,10 @@
-#include "PlatformHeaders.h"
-#include "Platform.h"
-#include "mathlib.h"
-#include "vector.h"
-#include "cdll_int.h"
-#include "kbutton.h"
+#define CLFUNCS
+#include "defs.h"
 #include "funcptrs.h"
-#include "Exports.h"
-
-#include <filesystem>
-#include <vector>
-
 #include "SDL2/SDL.h"
-
-#include "MinHook.h"
-#include "Utils.hpp"
-
-#include "SDL2/SDL_opengl.h"
-
-#include <algorithm>
-
-#include "studio.h"
-#include "com_model.h"
+#include "kbutton.h"
 #include "r_studioint.h"
+
 
 extern "C" {
 SDL_Window DLLEXPORT* GetSdlWindow();
@@ -42,7 +25,6 @@ using namespace PluginManager;
 
 void PatchEngine(void);
 
-cl_enginefunc_t gEngfuncs;
 cl_enginefunc_t gClientEngfuncs;
 
 HMODULE hClient;
@@ -617,9 +599,8 @@ void HookSDL2()
 		MH_EnableHook(pSDL_GL_SwapWindow);
 	}
 }
-bool HWHook();
 
-
+bool MP3Hook();
 
 //-----------------------------------------------------------------------------
 // Hook hw.dll
@@ -639,7 +620,7 @@ void HookEngine()
 	Utils utils = Utils::Utils(handle, base, size);
 	printf("[hl.exe] Hooked hw.dll!\n");
 
-	HWHook();
+	MP3Hook();
 }
 
 bool RequireRestart()

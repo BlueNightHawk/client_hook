@@ -39,13 +39,13 @@
     <ClCompile Include="..\..\plugins\backends\minhook\src\hde\hde32.c">
       <Filter>Minhook</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\plugins\mp3fix\main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\cl_hook\registry.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\cl_hook\memory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cl_hook\mp3fix.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

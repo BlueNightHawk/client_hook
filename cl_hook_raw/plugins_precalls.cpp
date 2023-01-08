@@ -1,6 +1,13 @@
-#define CLFUNCS
-#include "defs.h"
+#include "Platform.h"
+#include "mathlib.h"
+#include "vector.h"
+#include "cdll_int.h"
+
+#include "PlatformHeaders.h"
+#include <filesystem>
 #include "funcptrs.h"
+#include <vector>
+#include <string.h>
 #include "kbutton.h"
 
 extern std::vector<plugindll_t> g_Plugins;
@@ -8,11 +15,11 @@ extern std::vector<plugindll_t> g_Plugins;
 using namespace PluginManager;
 
 // From hl_weapons
-void PluginFuncsPost::HUD_PostRunCmd(struct local_state_s* from, struct local_state_s* to, struct usercmd_s* cmd, int runfuncs, double time, unsigned int random_seed)
+void PluginFuncsPre::HUD_PostRunCmd(struct local_state_s* from, struct local_state_s* to, struct usercmd_s* cmd, int runfuncs, double time, unsigned int random_seed)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_PostRunCmd)
 			continue;
@@ -22,11 +29,11 @@ void PluginFuncsPost::HUD_PostRunCmd(struct local_state_s* from, struct local_st
 }
 
 // From cdll_int
-int PluginFuncsPost::Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion)
+int PluginFuncsPre::Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pInitialize)
 			continue;
@@ -36,11 +43,11 @@ int PluginFuncsPost::Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion)
 	return 1;
 }
 
-int PluginFuncsPost::HUD_VidInit(void)
+int PluginFuncsPre::HUD_VidInit(void)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_VidInit)
 			continue;
@@ -50,11 +57,11 @@ int PluginFuncsPost::HUD_VidInit(void)
 	return 1;
 }
 
-void PluginFuncsPost::HUD_Init(void)
+void PluginFuncsPre::HUD_Init(void)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_Init)
 			continue;
@@ -63,11 +70,11 @@ void PluginFuncsPost::HUD_Init(void)
 	}
 }
 
-int PluginFuncsPost::HUD_Redraw(float flTime, int intermission)
+int PluginFuncsPre::HUD_Redraw(float flTime, int intermission)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_Redraw)
 			continue;
@@ -77,11 +84,11 @@ int PluginFuncsPost::HUD_Redraw(float flTime, int intermission)
 	return 1;
 }
 
-int PluginFuncsPost::HUD_UpdateClientData(client_data_t* cdata, float flTime)
+int PluginFuncsPre::HUD_UpdateClientData(client_data_t* cdata, float flTime)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_UpdateClientData)
 			continue;
@@ -91,11 +98,11 @@ int PluginFuncsPost::HUD_UpdateClientData(client_data_t* cdata, float flTime)
 	return 1;
 }
 
-void PluginFuncsPost::HUD_Reset(void)
+void PluginFuncsPre::HUD_Reset(void)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_Reset)
 			continue;
@@ -104,11 +111,11 @@ void PluginFuncsPost::HUD_Reset(void)
 	}
 }
 
-void PluginFuncsPost::HUD_PlayerMove(struct playermove_s* ppmove, int server)
+void PluginFuncsPre::HUD_PlayerMove(struct playermove_s* ppmove, int server)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_PlayerMove)
 			continue;
@@ -117,11 +124,11 @@ void PluginFuncsPost::HUD_PlayerMove(struct playermove_s* ppmove, int server)
 	}
 }
 
-void PluginFuncsPost::HUD_PlayerMoveInit(struct playermove_s* ppmove)
+void PluginFuncsPre::HUD_PlayerMoveInit(struct playermove_s* ppmove)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_PlayerMove)
 			continue;
@@ -130,11 +137,11 @@ void PluginFuncsPost::HUD_PlayerMoveInit(struct playermove_s* ppmove)
 	}
 }
 
-char PluginFuncsPost::HUD_PlayerMoveTexture(char* name)
+char PluginFuncsPre::HUD_PlayerMoveTexture(char* name)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_PlayerMoveTexture)
 			continue;
@@ -145,11 +152,11 @@ char PluginFuncsPost::HUD_PlayerMoveTexture(char* name)
 	return 0;
 }
 
-int PluginFuncsPost::HUD_ConnectionlessPacket(const struct netadr_s* net_from, const char* args, char* response_buffer, int* response_buffer_size)
+int PluginFuncsPre::HUD_ConnectionlessPacket(const struct netadr_s* net_from, const char* args, char* response_buffer, int* response_buffer_size)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_ConnectionlessPacket)
 			continue;
@@ -159,11 +166,11 @@ int PluginFuncsPost::HUD_ConnectionlessPacket(const struct netadr_s* net_from, c
 	return 1;
 }
 
-int PluginFuncsPost::HUD_GetHullBounds(int hullnumber, float* mins, float* maxs)
+int PluginFuncsPre::HUD_GetHullBounds(int hullnumber, float* mins, float* maxs)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_GetHullBounds)
 			continue;
@@ -174,11 +181,11 @@ int PluginFuncsPost::HUD_GetHullBounds(int hullnumber, float* mins, float* maxs)
 	return 0;
 }
 
-void PluginFuncsPost::HUD_Frame(double time)
+void PluginFuncsPre::HUD_Frame(double time)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_Frame)
 			continue;
@@ -187,11 +194,11 @@ void PluginFuncsPost::HUD_Frame(double time)
 	}
 }
 
-void PluginFuncsPost::HUD_VoiceStatus(int entindex, qboolean bTalking)
+void PluginFuncsPre::HUD_VoiceStatus(int entindex, qboolean bTalking)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_VoiceStatus)
 			continue;
@@ -200,11 +207,11 @@ void PluginFuncsPost::HUD_VoiceStatus(int entindex, qboolean bTalking)
 	}
 }
 
-void PluginFuncsPost::HUD_DirectorMessage(int iSize, void* pbuf)
+void PluginFuncsPre::HUD_DirectorMessage(int iSize, void* pbuf)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_DirectorMessage)
 			continue;
@@ -212,11 +219,11 @@ void PluginFuncsPost::HUD_DirectorMessage(int iSize, void* pbuf)
 		p->pHUD_DirectorMessage(iSize, pbuf);
 	}
 }
-void PluginFuncsPost::HUD_ChatInputPosition(int* x, int* y)
+void PluginFuncsPre::HUD_ChatInputPosition(int* x, int* y)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_ChatInputPosition)
 			continue;
@@ -226,11 +233,11 @@ void PluginFuncsPost::HUD_ChatInputPosition(int* x, int* y)
 }
 
 // From demo
-void PluginFuncsPost::Demo_ReadBuffer(int size, unsigned char* buffer)
+void PluginFuncsPre::Demo_ReadBuffer(int size, unsigned char* buffer)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pDemo_ReadBuffer)
 			continue;
@@ -240,11 +247,11 @@ void PluginFuncsPost::Demo_ReadBuffer(int size, unsigned char* buffer)
 }
 
 // From entity
-int PluginFuncsPost::HUD_AddEntity(int type, struct cl_entity_s* ent, const char* modelname)
+int PluginFuncsPre::HUD_AddEntity(int type, struct cl_entity_s* ent, const char* modelname)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_AddEntity)
 			continue;
@@ -254,11 +261,11 @@ int PluginFuncsPost::HUD_AddEntity(int type, struct cl_entity_s* ent, const char
 	return 1;
 }
 
-void PluginFuncsPost::HUD_CreateEntities(void)
+void PluginFuncsPre::HUD_CreateEntities(void)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_CreateEntities)
 			continue;
@@ -267,11 +274,11 @@ void PluginFuncsPost::HUD_CreateEntities(void)
 	}
 }
 
-void PluginFuncsPost::HUD_StudioEvent(const struct mstudioevent_s* event, const struct cl_entity_s* entity)
+void PluginFuncsPre::HUD_StudioEvent(const struct mstudioevent_s* event, const struct cl_entity_s* entity)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_StudioEvent)
 			continue;
@@ -280,11 +287,11 @@ void PluginFuncsPost::HUD_StudioEvent(const struct mstudioevent_s* event, const 
 	}
 }
 
-void PluginFuncsPost::HUD_TxferLocalOverrides(struct entity_state_s* state, const struct clientdata_s* client)
+void PluginFuncsPre::HUD_TxferLocalOverrides(struct entity_state_s* state, const struct clientdata_s* client)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_TxferLocalOverrides)
 			continue;
@@ -293,11 +300,11 @@ void PluginFuncsPost::HUD_TxferLocalOverrides(struct entity_state_s* state, cons
 	}
 }
 
-void PluginFuncsPost::HUD_ProcessPlayerState(struct entity_state_s* dst, const struct entity_state_s* src)
+void PluginFuncsPre::HUD_ProcessPlayerState(struct entity_state_s* dst, const struct entity_state_s* src)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_ProcessPlayerState)
 			continue;
@@ -306,11 +313,11 @@ void PluginFuncsPost::HUD_ProcessPlayerState(struct entity_state_s* dst, const s
 	}
 }
 
-void PluginFuncsPost::HUD_TxferPredictionData(struct entity_state_s* ps, const struct entity_state_s* pps, struct clientdata_s* pcd, const struct clientdata_s* ppcd, struct weapon_data_s* wd, const struct weapon_data_s* pwd)
+void PluginFuncsPre::HUD_TxferPredictionData(struct entity_state_s* ps, const struct entity_state_s* pps, struct clientdata_s* pcd, const struct clientdata_s* ppcd, struct weapon_data_s* wd, const struct weapon_data_s* pwd)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_TxferPredictionData)
 			continue;
@@ -319,11 +326,11 @@ void PluginFuncsPost::HUD_TxferPredictionData(struct entity_state_s* ps, const s
 	}
 }
 
-void PluginFuncsPost::HUD_TempEntUpdate(double frametime, double client_time, double cl_gravity, struct tempent_s** ppTempEntFree, struct tempent_s** ppTempEntActive, int (*Callback_AddVisibleEntity)(struct cl_entity_s* pEntity), void (*Callback_TempEntPlaySound)(struct tempent_s* pTemp, float damp))
+void PluginFuncsPre::HUD_TempEntUpdate(double frametime, double client_time, double cl_gravity, struct tempent_s** ppTempEntFree, struct tempent_s** ppTempEntActive, int (*Callback_AddVisibleEntity)(struct cl_entity_s* pEntity), void (*Callback_TempEntPlaySound)(struct tempent_s* pTemp, float damp))
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_TempEntUpdate)
 			continue;
@@ -332,11 +339,11 @@ void PluginFuncsPost::HUD_TempEntUpdate(double frametime, double client_time, do
 	}
 }
 
-struct cl_entity_s* PluginFuncsPost::HUD_GetUserEntity(int index)
+struct cl_entity_s* PluginFuncsPre::HUD_GetUserEntity(int index)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_GetUserEntity)
 			continue;
@@ -347,11 +354,11 @@ struct cl_entity_s* PluginFuncsPost::HUD_GetUserEntity(int index)
 }
 
 // From in_camera
-void PluginFuncsPost::CAM_Think(void)
+void PluginFuncsPre::CAM_Think(void)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pCAM_Think)
 			continue;
@@ -360,11 +367,11 @@ void PluginFuncsPost::CAM_Think(void)
 	}
 }
 
-int PluginFuncsPost::CL_IsThirdPerson(void)
+int PluginFuncsPre::CL_IsThirdPerson(void)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pCL_IsThirdPerson)
 			continue;
@@ -374,11 +381,11 @@ int PluginFuncsPost::CL_IsThirdPerson(void)
 	return 0;
 }
 
-void PluginFuncsPost::CL_CameraOffset(float* ofs)
+void PluginFuncsPre::CL_CameraOffset(float* ofs)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pCL_CameraOffset)
 			continue;
@@ -388,11 +395,11 @@ void PluginFuncsPost::CL_CameraOffset(float* ofs)
 }
 
 // From input
-struct kbutton_s PluginFuncsPost::KB_Find(const char* name)
+struct kbutton_s PluginFuncsPre::KB_Find(const char* name)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pKB_Find)
 			continue;
@@ -403,11 +410,11 @@ struct kbutton_s PluginFuncsPost::KB_Find(const char* name)
 	return kbutton_t();
 }
 
-void PluginFuncsPost::CL_CreateMove(float frametime, struct usercmd_s* cmd, int active)
+void PluginFuncsPre::CL_CreateMove(float frametime, struct usercmd_s* cmd, int active)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pCL_CreateMove)
 			continue;
@@ -416,11 +423,11 @@ void PluginFuncsPost::CL_CreateMove(float frametime, struct usercmd_s* cmd, int 
 	}
 }
 
-void PluginFuncsPost::HUD_Shutdown(void)
+void PluginFuncsPre::HUD_Shutdown(void)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_Shutdown)
 			continue;
@@ -429,11 +436,11 @@ void PluginFuncsPost::HUD_Shutdown(void)
 	}
 }
 
-int PluginFuncsPost::HUD_Key_Event(int eventcode, int keynum, const char* pszCurrentBinding)
+int PluginFuncsPre::HUD_Key_Event(int eventcode, int keynum, const char* pszCurrentBinding)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_Key_Event)
 			continue;
@@ -444,11 +451,11 @@ int PluginFuncsPost::HUD_Key_Event(int eventcode, int keynum, const char* pszCur
 }
 
 // From inputw32
-void PluginFuncsPost::IN_ActivateMouse(void)
+void PluginFuncsPre::IN_ActivateMouse(void)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pIN_ActivateMouse)
 			continue;
@@ -457,11 +464,11 @@ void PluginFuncsPost::IN_ActivateMouse(void)
 	}
 }
 
-void PluginFuncsPost::IN_DeactivateMouse(void)
+void PluginFuncsPre::IN_DeactivateMouse(void)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pIN_DeactivateMouse)
 			continue;
@@ -470,11 +477,11 @@ void PluginFuncsPost::IN_DeactivateMouse(void)
 	}
 }
 
-void PluginFuncsPost::IN_MouseEvent(int mstate)
+void PluginFuncsPre::IN_MouseEvent(int mstate)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pIN_MouseEvent)
 			continue;
@@ -483,11 +490,11 @@ void PluginFuncsPost::IN_MouseEvent(int mstate)
 	}
 }
 
-void PluginFuncsPost::IN_Accumulate(void)
+void PluginFuncsPre::IN_Accumulate(void)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pIN_Accumulate)
 			continue;
@@ -496,11 +503,11 @@ void PluginFuncsPost::IN_Accumulate(void)
 	}
 }
 
-void PluginFuncsPost::IN_ClearStates(void)
+void PluginFuncsPre::IN_ClearStates(void)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pIN_ClearStates)
 			continue;
@@ -511,11 +518,11 @@ void PluginFuncsPost::IN_ClearStates(void)
 
 
 // From tri
-void PluginFuncsPost::HUD_DrawNormalTriangles(void)
+void PluginFuncsPre::HUD_DrawNormalTriangles(void)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_DrawNormalTriangles)
 			continue;
@@ -524,11 +531,11 @@ void PluginFuncsPost::HUD_DrawNormalTriangles(void)
 	}
 }
 
-void PluginFuncsPost::HUD_DrawTransparentTriangles(void)
+void PluginFuncsPre::HUD_DrawTransparentTriangles(void)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_DrawTransparentTriangles)
 			continue;
@@ -538,11 +545,11 @@ void PluginFuncsPost::HUD_DrawTransparentTriangles(void)
 }
 
 // From view
-void PluginFuncsPost::V_CalcRefdef(struct ref_params_s* pparams)
+void PluginFuncsPre::V_CalcRefdef(struct ref_params_s* pparams)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pV_CalcRefdef)
 			continue;
@@ -552,11 +559,11 @@ void PluginFuncsPost::V_CalcRefdef(struct ref_params_s* pparams)
 }
 
 // From GameStudioModelRenderer
-int PluginFuncsPost::HUD_GetStudioModelInterface(int version, struct r_studio_interface_s** ppinterface, struct engine_studio_api_s* pstudio)
+int PluginFuncsPre::HUD_GetStudioModelInterface(int version, struct r_studio_interface_s** ppinterface, struct engine_studio_api_s* pstudio)
 {
 	for (size_t i = 0; i < g_Plugins.size(); i++)
 	{
-		auto p = &g_Plugins.at(i).postCall;
+		auto p = &g_Plugins.at(i).preCall;
 
 		if (!p->pHUD_GetStudioModelInterface)
 			continue;
@@ -565,3 +572,17 @@ int PluginFuncsPost::HUD_GetStudioModelInterface(int version, struct r_studio_in
 	}
 	return 0;
 }
+
+void PluginFuncsPre::DLL_SwapWindow()
+{
+	for (size_t i = 0; i < g_Plugins.size(); i++)
+	{
+		auto p = &g_Plugins.at(i);
+
+		if (!p->pDLL_SwapWindow)
+			continue;
+
+		p->pDLL_SwapWindow();
+	}
+}
+	

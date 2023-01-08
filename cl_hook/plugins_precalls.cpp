@@ -1,13 +1,6 @@
-#include "Platform.h"
-#include "mathlib.h"
-#include "vector.h"
-#include "cdll_int.h"
-
-#include "PlatformHeaders.h"
-#include <filesystem>
+#define CLFUNCS
+#include "defs.h"
 #include "funcptrs.h"
-#include <vector>
-#include <string.h>
 #include "kbutton.h"
 
 extern std::vector<plugindll_t> g_Plugins;
