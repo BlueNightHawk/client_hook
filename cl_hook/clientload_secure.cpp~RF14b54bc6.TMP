@@ -1,0 +1,265 @@
+#define CLFUNCS
+#include "defs.h"
+#include "funcptrs.h"
+#include "SDL2/SDL.h"
+#include "kbutton.h"
+#include "r_studioint.h"
+
+#include "interface.h"
+#include "FileSystem.h"
+#include "filesystem_utils.h"
+
+#include "APIProxy.h"
+
+// Function type declarations for client destination functions
+typedef void (*DST_INITIALIZE_FUNC)(struct cl_enginefuncs_s**, int*);
+typedef void (*DST_HUD_INIT_FUNC)(void);
+typedef void (*DST_HUD_VIDINIT_FUNC)(void);
+typedef void (*DST_HUD_REDRAW_FUNC)(float*, int*);
+typedef void (*DST_HUD_UPDATECLIENTDATA_FUNC)(struct client_data_s**, float*);
+typedef void (*DST_HUD_RESET_FUNC)(void);
+typedef void (*DST_HUD_CLIENTMOVE_FUNC)(struct playermove_s**, qboolean*);
+typedef void (*DST_HUD_CLIENTMOVEINIT_FUNC)(struct playermove_s**);
+typedef void (*DST_HUD_TEXTURETYPE_FUNC)(char**);
+typedef void (*DST_HUD_IN_ACTIVATEMOUSE_FUNC)(void);
+typedef void (*DST_HUD_IN_DEACTIVATEMOUSE_FUNC)(void);
+typedef void (*DST_HUD_IN_MOUSEEVENT_FUNC)(int*);
+typedef void (*DST_HUD_IN_CLEARSTATES_FUNC)(void);
+typedef void (*DST_HUD_IN_ACCUMULATE_FUNC)(void);
+typedef void (*DST_HUD_CL_CREATEMOVE_FUNC)(float*, struct usercmd_s**, int*);
+typedef void (*DST_HUD_CL_ISTHIRDPERSON_FUNC)(void);
+typedef void (*DST_HUD_CL_GETCAMERAOFFSETS_FUNC)(float**);
+typedef void (*DST_HUD_KB_FIND_FUNC)(const char**);
+typedef void (*DST_HUD_CAMTHINK_FUNC)(void);
+typedef void (*DST_HUD_CALCREF_FUNC)(struct ref_params_s**);
+typedef void (*DST_HUD_ADDENTITY_FUNC)(int*, struct cl_entity_s**, const char**);
+typedef void (*DST_HUD_CREATEENTITIES_FUNC)(void);
+typedef void (*DST_HUD_DRAWNORMALTRIS_FUNC)(void);
+typedef void (*DST_HUD_DRAWTRANSTRIS_FUNC)(void);
+typedef void (*DST_HUD_STUDIOEVENT_FUNC)(const struct mstudioevent_s**, const struct cl_entity_s**);
+typedef void (*DST_HUD_POSTRUNCMD_FUNC)(struct local_state_s**, struct local_state_s**, struct usercmd_s**, int*, double*, unsigned int*);
+typedef void (*DST_HUD_SHUTDOWN_FUNC)(void);
+typedef void (*DST_HUD_TXFERLOCALOVERRIDES_FUNC)(struct entity_state_s**, const struct clientdata_s**);
+typedef void (*DST_HUD_PROCESSPLAYERSTATE_FUNC)(struct entity_state_s**, const struct entity_state_s**);
+typedef void (*DST_HUD_TXFERPREDICTIONDATA_FUNC)(struct entity_state_s**, const struct entity_state_s**, struct clientdata_s**, const struct clientdata_s**, struct weapon_data_s**, const struct weapon_data_s**);
+typedef void (*DST_HUD_DEMOREAD_FUNC)(int*, unsigned char**);
+typedef void (*DST_HUD_CONNECTIONLESS_FUNC)(const struct netadr_s**, const char**, char**, int**);
+typedef void (*DST_HUD_GETHULLBOUNDS_FUNC)(int*, float**, float**);
+typedef void (*DST_HUD_FRAME_FUNC)(double*);
+typedef void (*DST_HUD_KEY_EVENT_FUNC)(int*, int*, const char**);
+typedef void (*DST_HUD_TEMPENTUPDATE_FUNC)(double*, double*, double*, struct tempent_s***, struct tempent_s***, int (**Callback_AddVisibleEntity)(struct cl_entity_s* pEntity), void (**Callback_TempEntPlaySound)(struct tempent_s* pTemp, float damp));
+typedef void (*DST_HUD_GETUSERENTITY_FUNC)(int*);
+typedef void (*DST_HUD_VOICESTATUS_FUNC)(int*, qboolean*);
+typedef void (*DST_HUD_DIRECTORMESSAGE_FUNC)(int*, void**);
+typedef void (*DST_HUD_STUDIO_INTERFACE_FUNC)(int*, struct r_studio_interface_s***, struct engine_studio_api_s**);
+typedef void (*DST_HUD_CHATINPUTPOSITION_FUNC)(int**, int**);
+typedef void (*DST_HUD_GETPLAYERTEAM)(int);
+
+// Pointers to the client destination functions
+typedef struct
+{
+	DST_INITIALIZE_FUNC pInitFunc;
+	DST_HUD_INIT_FUNC pHudInitFunc;
+	DST_HUD_VIDINIT_FUNC pHudVidInitFunc;
+	DST_HUD_REDRAW_FUNC pHudRedrawFunc;
+	DST_HUD_UPDATECLIENTDATA_FUNC pHudUpdateClientDataFunc;
+	DST_HUD_RESET_FUNC pHudResetFunc;
+	DST_HUD_CLIENTMOVE_FUNC pClientMove;
+	DST_HUD_CLIENTMOVEINIT_FUNC pClientMoveInit;
+	DST_HUD_TEXTURETYPE_FUNC pClientTextureType;
+	DST_HUD_IN_ACTIVATEMOUSE_FUNC pIN_ActivateMouse;
+	DST_HUD_IN_DEACTIVATEMOUSE_FUNC pIN_DeactivateMouse;
+	DST_HUD_IN_MOUSEEVENT_FUNC pIN_MouseEvent;
+	DST_HUD_IN_CLEARSTATES_FUNC pIN_ClearStates;
+	DST_HUD_IN_ACCUMULATE_FUNC pIN_Accumulate;
+	DST_HUD_CL_CREATEMOVE_FUNC pCL_CreateMove;
+	DST_HUD_CL_ISTHIRDPERSON_FUNC pCL_IsThirdPerson;
+	DST_HUD_CL_GETCAMERAOFFSETS_FUNC pCL_GetCameraOffsets;
+	DST_HUD_KB_FIND_FUNC pFindKey;
+	DST_HUD_CAMTHINK_FUNC pCamThink;
+	DST_HUD_CALCREF_FUNC pCalcRefdef;
+	DST_HUD_ADDENTITY_FUNC pAddEntity;
+	DST_HUD_CREATEENTITIES_FUNC pCreateEntities;
+	DST_HUD_DRAWNORMALTRIS_FUNC pDrawNormalTriangles;
+	DST_HUD_DRAWTRANSTRIS_FUNC pDrawTransparentTriangles;
+	DST_HUD_STUDIOEVENT_FUNC pStudioEvent;
+	DST_HUD_POSTRUNCMD_FUNC pPostRunCmd;
+	DST_HUD_SHUTDOWN_FUNC pShutdown;
+	DST_HUD_TXFERLOCALOVERRIDES_FUNC pTxferLocalOverrides;
+	DST_HUD_PROCESSPLAYERSTATE_FUNC pProcessPlayerState;
+	DST_HUD_TXFERPREDICTIONDATA_FUNC pTxferPredictionData;
+	DST_HUD_DEMOREAD_FUNC pReadDemoBuffer;
+	DST_HUD_CONNECTIONLESS_FUNC pConnectionlessPacket;
+	DST_HUD_GETHULLBOUNDS_FUNC pGetHullBounds;
+	DST_HUD_FRAME_FUNC pHudFrame;
+	DST_HUD_KEY_EVENT_FUNC pKeyEvent;
+	DST_HUD_TEMPENTUPDATE_FUNC pTempEntUpdate;
+	DST_HUD_GETUSERENTITY_FUNC pGetUserEntity;
+	DST_HUD_VOICESTATUS_FUNC pVoiceStatus;			   // Possibly null on old client dlls.
+	DST_HUD_DIRECTORMESSAGE_FUNC pDirectorMessage;	   // Possibly null on old client dlls.
+	DST_HUD_STUDIO_INTERFACE_FUNC pStudioInterface;	   // Not used by all clients
+	DST_HUD_CHATINPUTPOSITION_FUNC pChatInputPosition; // Not used by all clients
+	DST_HUD_GETPLAYERTEAM pGetPlayerTeam;			   // Not used by all clients
+} cldll_func_dst_t;
+
+// ********************************************************
+// Functions exposed by the security module
+// ********************************************************
+typedef void (*PFN_LOADMOD)(char* pchModule);
+typedef void (*PFN_CLOSEMOD)(void);
+typedef int (*PFN_NCALL)(int ijump, int cnArg, ...);
+
+typedef void (*PFN_GETCLDSTADDRS)(cldll_func_dst_t* pcldstAddrs);
+typedef void (*PFN_GETENGDSTADDRS)(cl_enginefunc_dst_t* pengdstAddrs);
+typedef void (*PFN_MODULELOADED)(void);
+
+typedef void (*PFN_PROCESSOUTGOINGNET)(struct netchan_s* pchan, struct sizebuf_s* psizebuf);
+typedef qboolean (*PFN_PROCESSINCOMINGNET)(struct netchan_s* pchan, struct sizebuf_s* psizebuf);
+
+typedef void (*PFN_TEXTURELOAD)(char* pszName, int dxWidth, int dyHeight, char* pbData);
+typedef void (*PFN_MODELLOAD)(struct model_s* pmodel, void* pvBuf);
+
+typedef void (*PFN_FRAMEBEGIN)(void);
+typedef void (*PFN_FRAMERENDER1)(void);
+typedef void (*PFN_FRAMERENDER2)(void);
+
+typedef void (*PFN_SETMODSHELPERS)(modshelpers_t* pmodshelpers);
+typedef void (*PFN_SETMODCHELPERS)(modchelpers_t* pmodchelpers);
+typedef void (*PFN_SETENGDATA)(engdata_t* pengdata);
+
+typedef void (*PFN_CONNECTCLIENT)(int iPlayer);
+typedef void (*PFN_RECORDIP)(unsigned int pnIP);
+typedef void (*PFN_PLAYERSTATUS)(unsigned char* pbData, int cbData);
+
+typedef void (*PFN_SETENGINEVERSION)(int nVersion);
+
+// typedef class CMachine *(*PFN_PCMACHINE)(void);
+typedef int (*PFN_PCMACHINE)(void);
+typedef void (*PFN_SETIP)(int ijump);
+typedef void (*PFN_EXECUTE)(void);
+
+typedef struct modfuncs_s
+{
+	// Functions for the pcode interpreter
+	PFN_LOADMOD m_pfnLoadMod;
+	PFN_CLOSEMOD m_pfnCloseMod;
+	PFN_NCALL m_pfnNCall;
+
+	// API destination functions
+	PFN_GETCLDSTADDRS m_pfnGetClDstAddrs;
+	PFN_GETENGDSTADDRS m_pfnGetEngDstAddrs;
+
+	// Miscellaneous functions
+	PFN_MODULELOADED m_pfnModuleLoaded; // Called right after the module is loaded
+
+	// Functions for processing network traffic
+	PFN_PROCESSOUTGOINGNET m_pfnProcessOutgoingNet; // Every outgoing packet gets run through this
+	PFN_PROCESSINCOMINGNET m_pfnProcessIncomingNet; // Every incoming packet gets run through this
+
+	// Resource functions
+	PFN_TEXTURELOAD m_pfnTextureLoad; // Called as each texture is loaded
+	PFN_MODELLOAD m_pfnModelLoad;	  // Called as each model is loaded
+
+	// Functions called every frame
+	PFN_FRAMEBEGIN m_pfnFrameBegin;		// Called at the beginning of each frame cycle
+	PFN_FRAMERENDER1 m_pfnFrameRender1; // Called at the beginning of the render loop
+	PFN_FRAMERENDER2 m_pfnFrameRender2; // Called at the end of the render loop
+
+	// Module helper transfer
+	PFN_SETMODSHELPERS m_pfnSetModSHelpers;
+	PFN_SETMODCHELPERS m_pfnSetModCHelpers;
+	PFN_SETENGDATA m_pfnSetEngData;
+
+	// Which version of the module is this?
+	int m_nVersion;
+
+	// Miscellaneous game stuff
+	PFN_CONNECTCLIENT m_pfnConnectClient; // Called whenever a new client connects
+	PFN_RECORDIP m_pfnRecordIP;			  // Secure master has reported a new IP for us
+	PFN_PLAYERSTATUS m_pfnPlayerStatus;	  // Called whenever we receive a PlayerStatus packet
+
+	// Recent additions
+	PFN_SETENGINEVERSION m_pfnSetEngineVersion; // 1 = patched engine
+
+	// reserved for future expansion
+	int m_nVoid2;
+	int m_nVoid3;
+	int m_nVoid4;
+	int m_nVoid5;
+	int m_nVoid6;
+	int m_nVoid7;
+	int m_nVoid8;
+	int m_nVoid9;
+} modfuncs_t;
+
+typedef struct module_s
+{
+	unsigned char ucMD5Hash[16]; // hash over code
+	qboolean fLoaded;			 // true if successfully loaded
+} module_t;
+
+
+// Module exports
+modfuncs_t g_modfuncs;
+module_t g_module;
+
+using FFunction = void (*)(void*);
+
+struct BlobFootprint_t
+{
+	int32 m_hDll;
+};
+
+void* NLoadBlobFile(const char* pstFileName, BlobFootprint_t* pblobfootprint, void* pv, char fLoadAsDll)
+{
+	void* pFile = nullptr;
+
+	if (fLoadAsDll)
+	{
+		char rgchNew[2048];
+		strcpy(rgchNew, pstFileName);
+
+		char rgchLocalPath[2048];
+		g_pFileSystem->GetLocalPath(rgchNew, rgchLocalPath, ARRAYSIZE(rgchLocalPath));
+
+		g_pFileSystem->GetLocalCopy(rgchLocalPath);
+		pFile = Sys_LoadModule(rgchLocalPath);
+		pblobfootprint->m_hDll = reinterpret_cast<int32>(pFile);
+
+		if (pFile)
+		{
+			auto pFunc = reinterpret_cast<FFunction>(GetProcAddress((HMODULE)pFile, "F"));
+
+			if (pFunc)
+			{
+				pFunc(pv);
+			}
+			else
+			{
+				Sys_UnloadModule(reinterpret_cast<CSysModule*>(pFile));
+				pFile = nullptr;
+			}
+		}
+	}
+
+	return pFile;
+}
+
+
+bool LoadSecureClient(const char* pszDllName)
+{
+	g_ClientFuncs.pInitialize = (_pfn_Initialize)&g_modfuncs;
+#if 0
+	cl_funcs.pHudVidInitFunc = (HUD_VIDINIT_FUNC)&g_cldstAddrs;
+
+	auto pModule = reinterpret_cast<CSysModule*>(NLoadBlobFile(pszDllName, &g_blobfootprintClient, &cl_funcs, true));
+
+	if (pModule)
+	{
+		hClientDLL = pModule;
+		fClientLoaded = true;
+	}
+
+	return pModule != nullptr;
+#endif
+}

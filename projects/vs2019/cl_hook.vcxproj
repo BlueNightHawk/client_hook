@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\cl_hook\clientload.cpp" />
     <ClCompile Include="..\..\cl_hook\external_plugins.cpp" />
     <ClCompile Include="..\..\cl_hook\hook_main.cpp" />
     <ClCompile Include="..\..\cl_hook\memory.cpp" />
@@ -18,11 +19,14 @@
     <ClCompile Include="..\..\cl_hook\plugins_postcalls.cpp" />
     <ClCompile Include="..\..\cl_hook\plugins_precalls.cpp" />
     <ClCompile Include="..\..\cl_hook\registry.cpp" />
+    <ClCompile Include="..\..\cl_hook\shadows.cpp" />
+    <ClCompile Include="..\..\game_shared\filesystem_utils.cpp" />
     <ClCompile Include="..\..\plugins\backends\minhook\SPTLib\DetoursUtils.cpp" />
     <ClCompile Include="..\..\plugins\backends\minhook\src\buffer.c" />
     <ClCompile Include="..\..\plugins\backends\minhook\src\hde\hde32.c" />
     <ClCompile Include="..\..\plugins\backends\minhook\src\hook.c" />
     <ClCompile Include="..\..\plugins\backends\minhook\src\trampoline.c" />
+    <ClCompile Include="..\..\public\interface.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\cl_hook\funcptrs.h" />
@@ -95,8 +99,7 @@
       </BaseAddress>
     </Link>
     <PostBuildEvent>
-      <Command>cmd /c ""$(ProjectDir)..\..\filecopy.bat" "$(OutDir)" "cl_dlls" "$(TargetFileName)""
-cmd /c ""$(ProjectDir)..\..\filecopy.bat" "$(OutDir)" "cl_dlls" "$(TargetName).pdb""</Command>
+      <Command>copy /Y "$(TargetDir)$(TargetFileName)" "E:\SteamLibrary\steamapps\common\Half-Life\nlui\cl_dlls\$(TargetFileName)</Command>
       <Message>Installing client files</Message>
     </PostBuildEvent>
     <PostBuildEvent />
@@ -127,8 +130,7 @@ cmd /c ""$(ProjectDir)..\..\filecopy.bat" "$(OutDir)" "cl_dlls" "$(TargetName).p
       </BaseAddress>
     </Link>
     <PostBuildEvent>
-      <Command>cmd /c ""$(ProjectDir)..\..\filecopy.bat" "$(OutDir)" "cl_dlls" "$(TargetFileName)""
-cmd /c ""$(ProjectDir)..\..\filecopy.bat" "$(OutDir)" "cl_dlls" "$(TargetName).pdb""</Command>
+      <Command>copy /Y "$(TargetDir)$(TargetFileName)" "E:\SteamLibrary\steamapps\common\Half-Life\nlui\cl_dlls\$(TargetFileName)</Command>
       <Message>Installing client files</Message>
     </PostBuildEvent>
     <PostBuildEvent />

@@ -5,6 +5,9 @@
 #include "kbutton.h"
 #include "r_studioint.h"
 
+#include "interface.h"
+#include "FileSystem.h"
+#include "filesystem_utils.h"
 
 extern "C" {
 SDL_Window DLLEXPORT* GetSdlWindow();
@@ -12,6 +15,15 @@ int DLLEXPORT GetWindowCenterX(void);
 int DLLEXPORT GetWindowCenterY(void);
 engine_studio_api_s DLLEXPORT* GetStudioInterface();
 }
+
+/* Define the SDL window structure, corresponding to toplevel windows */
+struct SDL_Window
+{
+	void* stub;
+	void* stub2;
+	void* stub3;
+	SDL_Surface* icon;
+};
 
 bool InitHooks();
 int RegRead(const char* valuename);
@@ -35,12 +47,19 @@ dllfuncs_s g_OriginalClientFuncs;
 engine_studio_api_s IEngineStudio;
 engine_studio_api_s IOriginalEngineStudio;
 
+void HOOKED_GL_StudioDrawShadow();
+void HOOKED_GL_SetRenderMode(int mode);
+void HOOKED_StudioSetupModel(int bodypart, void** ppbodypart, void** ppsubmodel);
+void HOOKED_StudioSetHeader(void* header);
+void SetupMatrix();
+
 #define GET_FUNC_PTR(name) g_ClientFuncs.p##name## = (_pfn_##name##)GetProcAddress(hClient, #name)
+
+HMODULE LoadClient(const char* pszDllName);
+void UnloadClient();
 
 void InitClientDll(cl_enginefunc_t* pEnginefuncs)
 {
-	SetDllDirectory((std::filesystem::current_path().string() + "/" + pEnginefuncs->pfnGetGameDirectory() + "/cl_dlls").c_str());
-
 	char dllname[128] = "mod_client.dll";
 	static char token[128];
 	char *afile, *pfile;
@@ -63,7 +82,7 @@ void InitClientDll(cl_enginefunc_t* pEnginefuncs)
 	}
 
 	pEnginefuncs->COM_FreeFile(afile);
-	hClient = LoadLibrary(dllname);
+	hClient = LoadClient((std::filesystem::current_path().string() + "/" + pEnginefuncs->pfnGetGameDirectory() + "/cl_dlls/" + dllname).c_str());
 }
 
 void InitExports()
@@ -145,6 +164,8 @@ int DLLEXPORT Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion)
 	// Fixes spinning bug on fullscreen
 	gClientEngfuncs.GetWindowCenterX = &::GetWindowCenterX;
 	gClientEngfuncs.GetWindowCenterY = &::GetWindowCenterY;
+
+	FileSystem_LoadFileSystem();
 
 	if (!InitHooks())
 	{
@@ -390,7 +411,7 @@ void DLLEXPORT HUD_Shutdown(void)
 {
 	PluginFuncsPre::HUD_Shutdown();
 	g_ClientFuncs.pHUD_Shutdown();
-	FreeLibrary(hClient);
+	UnloadClient();
 	PluginFuncsPost::HUD_Shutdown();
 
 	FreePlugins();
@@ -472,9 +493,15 @@ int DLLEXPORT HUD_GetStudioModelInterface(int version, struct r_studio_interface
 	memcpy(&IEngineStudio, pstudio, sizeof(engine_studio_api_s));
 	memcpy(&IOriginalEngineStudio, pstudio, sizeof(engine_studio_api_s));
 
-	PluginFuncsPre::HUD_GetStudioModelInterface(version, ppinterface, pstudio);
-	int result = g_ClientFuncs.pHUD_GetStudioModelInterface(version, ppinterface, pstudio);
-	PluginFuncsPost::HUD_GetStudioModelInterface(version, ppinterface, pstudio);
+	IEngineStudio.GL_StudioDrawShadow = &HOOKED_GL_StudioDrawShadow;
+	IEngineStudio.GL_SetRenderMode = &HOOKED_GL_SetRenderMode;
+	IEngineStudio.StudioSetupModel = &HOOKED_StudioSetupModel;
+	IEngineStudio.StudioSetHeader = &HOOKED_StudioSetHeader;
+	SetupMatrix();
+
+	PluginFuncsPre::HUD_GetStudioModelInterface(version, ppinterface, &IEngineStudio);
+	int result = g_ClientFuncs.pHUD_GetStudioModelInterface(version, ppinterface, &IEngineStudio);
+	PluginFuncsPost::HUD_GetStudioModelInterface(version, ppinterface, &IEngineStudio);
 
 	return result;
 }
@@ -507,6 +534,54 @@ int DLLEXPORT GetWindowCenterY(void)
 
 void HL_ToggleFullScreen(SDL_Window* window, int mode);
 
+int ProcessEvent(void* userdata, SDL_Event* event)
+{
+	if (event->type == SDL_WINDOWEVENT)
+	{
+		if (event->window.event == SDL_WINDOWEVENT_CLOSE)
+		{
+			gEngfuncs.pfnClientCmd("quit");
+		}
+	}
+	return 1;
+}
+
+const char* pAttribNames[]{
+	"SDL_GL_RED_SIZE",
+	"SDL_GL_GREEN_SIZE",
+	"SDL_GL_BLUE_SIZE",
+	"SDL_GL_ALPHA_SIZE",
+	"SDL_GL_BUFFER_SIZE",
+	"SDL_GL_DOUBLEBUFFER",
+	"SDL_GL_DEPTH_SIZE",
+	"SDL_GL_STENCIL_SIZE",
+	"SDL_GL_ACCUM_RED_SIZE",
+	"SDL_GL_ACCUM_GREEN_SIZE",
+	"SDL_GL_ACCUM_BLUE_SIZE",
+	"SDL_GL_ACCUM_ALPHA_SIZE",
+	"SDL_GL_STEREO",
+	"SDL_GL_MULTISAMPLEBUFFERS",
+	"SDL_GL_MULTISAMPLESAMPLES",
+	"SDL_GL_ACCELERATED_VISUAL",
+	"SDL_GL_RETAINED_BACKING",
+	"SDL_GL_CONTEXT_MAJOR_VERSION",
+	"SDL_GL_CONTEXT_MINOR_VERSION",
+	"SDL_GL_CONTEXT_EGL",
+	"SDL_GL_CONTEXT_FLAGS",
+	"SDL_GL_CONTEXT_PROFILE_MASK",
+	"SDL_GL_SHARE_WITH_CURRENT_CONTEXT"};
+
+void PrintAttribs()
+{
+	int iAttrib;
+
+	for (int i = 0; i < SDL_GL_SHARE_WITH_CURRENT_CONTEXT + 1; i++)
+	{
+		SDL_GL_GetAttribute((SDL_GLattr)i, &iAttrib);
+		gEngfuncs.Con_DPrintf("%s : %i\n", pAttribNames[i], iAttrib);
+	}
+}
+
 //-----------------------------------------------------------------------------
 //
 // 
@@ -521,19 +596,73 @@ SDL_Window* CreatePatchedWindow()
 	SDL_GetWindowSize(window, &w, &h);
 	Uint32 flags = SDL_GetWindowFlags(window);
 
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+	//SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+	//SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
+	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_ACCUM_RED_SIZE, 16);
+	SDL_GL_SetAttribute(SDL_GL_ACCUM_GREEN_SIZE, 16);
+	SDL_GL_SetAttribute(SDL_GL_ACCUM_BLUE_SIZE, 16);
+	SDL_GL_SetAttribute(SDL_GL_ACCUM_ALPHA_SIZE, 16);
 	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+	SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE, 32);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
 
 	goldsrcWindow = SDL_CreateWindow(title, x, y, w, h, flags);
 
-	SDL_GLContext gl_context = SDL_GL_CreateContext(goldsrcWindow);
+	SDL_GLContext gl_context = static_cast<SDL_GLContext>(nullptr);
+
+	if (!gl_context)
+	{
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+		for (int i = 0; i <= 6; i++)
+		{
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6 - i);
+			gl_context = SDL_GL_CreateContext(goldsrcWindow);
+			if (gl_context)
+				break;
+		}
+	}
+	if (!gl_context)
+	{
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+		for (int i = 0; i <= 3; i++)
+		{
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3 - i);
+			gl_context = SDL_GL_CreateContext(goldsrcWindow);
+			if (gl_context)
+				break;
+		}
+	}
+	if (!gl_context)
+	{
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+		for (int i = 0; i <= 1; i++)
+		{
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1 - i);
+			gl_context = SDL_GL_CreateContext(goldsrcWindow);
+			if (gl_context)
+				break;
+		}
+	}
+	if (!gl_context)
+	{
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 1);
+		for (int i = 0; i <= 5; i++)
+		{
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5 - i);
+			gl_context = SDL_GL_CreateContext(goldsrcWindow);
+			if (gl_context)
+				break;
+		}
+	}
+
 	SDL_GL_MakeCurrent(goldsrcWindow, gl_context);
 
 	SDL_MinimizeWindow(window);
@@ -541,15 +670,11 @@ SDL_Window* CreatePatchedWindow()
 
 	SDL_MinimizeWindow(goldsrcWindow);
 
-	if (g_bSdlFullscreen)
-	{
-		//SDL_SetWindowFullscreen(goldsrcWindow, SDL_WINDOW_FULLSCREEN);
-	}
-
-	//SDL_RestoreWindow(goldsrcWindow);
-	//SDL_RaiseWindow(goldsrcWindow);
+	SDL_SetWindowIcon(goldsrcWindow, window->icon);
 
 	bRestoreWindow = true;
+
+	SDL_AddEventWatch(&ProcessEvent, nullptr);
 
 	return goldsrcWindow;
 }

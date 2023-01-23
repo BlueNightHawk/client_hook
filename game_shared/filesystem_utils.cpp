@@ -18,9 +18,6 @@
 
 #include "Platform.h"
 
-#include "extdll.h"
-#include "util.h"
-
 #include "interface.h"
 
 #include "filesystem_utils.h"
@@ -118,7 +115,7 @@ std::vector<std::byte> FileSystem_LoadFileIntoBuffer(const char* fileName, FileC
 		return buffer;
 	}
 
-	ALERT(at_console, "FileSystem_LoadFileIntoBuffer: couldn't open file \"%s\" for reading\n", fileName);
+	//ALERT(at_console, "FileSystem_LoadFileIntoBuffer: couldn't open file \"%s\" for reading\n", fileName);
 	return {};
 }
 
@@ -135,7 +132,7 @@ bool FileSystem_WriteTextToFile(const char* fileName, const char* text, const ch
 
 	if (length > static_cast<std::size_t>(std::numeric_limits<int>::max()))
 	{
-		ALERT(at_console, "FileSystem_WriteTextToFile: text too long\n");
+	//	ALERT(at_console, "FileSystem_WriteTextToFile: text too long\n");
 		return false;
 	}
 
@@ -146,7 +143,7 @@ bool FileSystem_WriteTextToFile(const char* fileName, const char* text, const ch
 		return true;
 	}
 
-	ALERT(at_console, "FileSystem_WriteTextToFile: couldn't open file \"%s\" for writing\n", fileName);
+//	ALERT(at_console, "FileSystem_WriteTextToFile: couldn't open file \"%s\" for writing\n", fileName);
 
 	return false;
 }
